@@ -59,39 +59,41 @@ The objective of Version 2 is not only to improve the architecture and functiona
 
 ## 🧠 How It Works
 
-┌──────────────────────────┐
-             │       STM32F446RE        │
-             │                          │
-             │  GPIO Button Inputs      │
-             │          │               │
-             │          ▼               │
-             │     EXTI Interrupts      │
-             │          │               │
-             │          ▼               │
-             │     Snake Game Logic     │
-             │          │               │
-             │   ┌──────┴──────┐        │
-             │   │             │        │
-             │   ▼             ▼        │
-             │ Snake        Food/Score  │
-             │ Movement      Collision  │
-             │   │                      │
-             │   └──────────┐           │
-             │              ▼           │
-             │       USART2 + DMA       │
-             └──────────────┬───────────┘
-                            │
-                            │ UART
-                            ▼
-             ┌──────────────────────────┐
-             │           PC             │
-             │                          │
-             │       Python             │
-             │      PySerial            │
-             │        Pygame            │
-             │                          │
-             │     Game Rendering       │
-             └──────────────────────────┘
+```text
+                 ┌──────────────────────────┐
+                 │       STM32F446RE        │
+                 │                          │
+                 │  GPIO Button Inputs      │
+                 │          │               │
+                 │          ▼               │
+                 │     EXTI Interrupts      │
+                 │          │               │
+                 │          ▼               │
+                 │     Snake Game Logic     │
+                 │          │               │
+                 │   ┌──────┴──────┐        │
+                 │   │             │        │
+                 │   ▼             ▼        │
+                 │ Snake        Food/Score  │
+                 │ Movement      Collision  │
+                 │   │                      │
+                 │   └──────────┐           │
+                 │              ▼           │
+                 │       USART2 + DMA       │
+                 └──────────────┬───────────┘
+                                │
+                                │ UART
+                                ▼
+                 ┌──────────────────────────┐
+                 │           PC             │
+                 │                          │
+                 │       Python             │
+                 │      PySerial            │
+                 │        Pygame            │
+                 │                          │
+                 │     Game Rendering       │
+                 └──────────────────────────┘
+```
 
 1. **Input**: Button presses generate GPIO external interrupts (`EXTI`) on the STM32 to update the intended direction buffer.
 2. **Game Loop**: A hardware timer updates snake coordinates periodically, tests collisions, handles food respawns, and updates scores.
@@ -129,21 +131,20 @@ The objective of Version 2 is not only to improve the architecture and functiona
 ---
 
 ## 📂 Project Structure
+
+```text
 Snake_Game/
-│
 ├── CMSIS/                          # ARM CMSIS Core & ST Device headers
 │   ├── Device/
 │   │   └── ST/
 │   │       └── STM32F4xx/
 │   │           └── Include/
 │   └── Include/
-│
 ├── Inc/                            # C Header files
 │   ├── isr.h
 │   ├── SnakeLogic.h
 │   ├── timer.h
 │   └── usart_DMA.h
-│
 ├── Src/                            # C Source files
 │   ├── gpio.c
 │   ├── isr.c
@@ -151,45 +152,46 @@ Snake_Game/
 │   ├── SnakeLogic.c
 │   ├── timer.c
 │   └── usart_DMA.c
-│
 ├── python/                         # PC Graphical & Test scripts
 │   ├── dma_test.py
 │   ├── serial_test.py
 │   └── snake_display.py
-│
 ├── linker.ld                       # Linker script for STM32F446RE
 ├── Makefile                        # Build and flash automation
 ├── startup_stm32f446xx.s           # Startup assembly file with vector table
 └── README.md                       # Project documentation
+```
 
 ---
 
 ## 🔄 Game Flow
 
+```text
 Start Game
-│
-▼
+    │
+    ▼
 Initialize STM32 Peripherals (GPIO, EXTI, USART2, DMA, Timer)
-│
-▼
+    │
+    ▼
 Initialize Snake & Generate Food
-│
-▼
+    │
+    ▼
 Snake Moves Automatically on Timer Tick
-│
-├── Button Press Interrupt? ──> Yes ──> Update Direction
-│
-├── Food Collision? ──────────> Yes ──> Increase Length & Score, Spawn Food
-│
-├── Self Collision? ──────────> Yes ──> Trigger Game Over State
-│
-└── Boundary Check ───────────> Yes ──> Wrap Around Screen
-│
-▼
+    │
+    ├── Button Press Interrupt? ──> Yes ──> Update Direction
+    │
+    ├── Food Collision? ──────────> Yes ──> Increase Length & Score, Spawn Food
+    │
+    ├── Self Collision? ──────────> Yes ──> Trigger Game Over State
+    │
+    └── Boundary Check ───────────> Yes ──> Wrap Around Screen
+            │
+            ▼
 Send Game State Packet via USART2 (DMA)
-│
-▼
+            │
+            ▼
 PC (PySerial + Pygame) reads packet & updates screen display
+```
 
 ---
 
@@ -217,36 +219,38 @@ make all
 
 # Flash to the connected STM32F446RE board
 make flash
+```
 
-2. Launch Python Display
+### 2. Launch Python Display
 Install dependencies:
-
-Bash
+```bash
 pip install pyserial pygame
-Set your COM port inside python/snake_display.py (e.g., COM3), then launch:
+```
 
-Bash
+Set your COM port inside `python/snake_display.py` (e.g., `COM3`), then launch:
+```bash
 python python/snake_display.py
+```
 
+---
 
-🎯 Learning Objectives
-STM32 Bare-Metal Register-level & HAL/CMSIS development
+## 🎯 Learning Objectives
 
-Nested Vector Interrupt Controller (NVIC) & EXTI line routing
+- STM32 Bare-Metal Register-level & HAL/CMSIS development
+- Nested Vector Interrupt Controller (NVIC) & EXTI line routing
+- Precise hardware timers configuration
+- USART communication using Direct Memory Access (DMA)
+- Circular buffers and state-machine-driven game logic
+- Inter-system protocol design (Embedded C ↔ Python serial parsing)
+- 2D rendering with Pygame
 
-Precise hardware timers configuration
+---
 
-USART communication using Direct Memory Access (DMA)
+## 🔮 Future Development — Version 2 (FreeRTOS)
 
-Circular buffers and state-machine-driven game logic
+Version 2 will transition from the bare-metal superloop/ISR design to a multi-tasking Real-Time Operating System (**FreeRTOS**):
 
-Inter-system protocol design (Embedded C ↔ Python serial parsing)
-
-2D rendering with Pygame
-
-🔮 Future Development — Version 2 (FreeRTOS)
-Version 2 will transition from the bare-metal superloop/ISR design to a multi-tasking Real-Time Operating System (FreeRTOS):
-
+```text
                     FreeRTOS
                        │
         ┌──────────────┼──────────────┐
@@ -259,17 +263,22 @@ Version 2 will transition from the bare-metal superloop/ISR design to a multi-ta
         │
         ▼
    Game State (Food, Collision, Score, Speed)
+```
 
-📜 Version History
-v1.0 (Current):
-    Full bare-metal implementation on STM32F446RE
-    EXTI push-button handling & Timer-driven movement
-    DMA-driven USART2 communication
-    Python Pygame frontend display
+---
 
-v2.0 (Planned):
-    FreeRTOS multitasking architecture
-    FreeRTOS Queues, Mutexes, Semaphores, and Software Timers
+## 📜 Version History
 
-👨‍💻 Author
-MD GULAB   
+- **v1.0 (Current)**:
+  - Full bare-metal implementation on STM32F446RE
+  - EXTI push-button handling & Timer-driven movement
+  - DMA-driven USART2 communication
+  - Python Pygame frontend display
+- **v2.0 (Planned)**:
+  - FreeRTOS multitasking architecture
+  - FreeRTOS Queues, Mutexes, Semaphores, and Software Timers
+
+---
+
+## 👨‍💻 Author
+**MD GULAB**
