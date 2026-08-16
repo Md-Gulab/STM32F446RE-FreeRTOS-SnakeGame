@@ -1,0 +1,53 @@
+# ==============================================================================
+# Build Output & Binaries
+# ==============================================================================
+Builds/
+build/
+bin/
+obj/
+
+# Object and dependency files
+*.o
+*.obj
+*.d
+
+# Executable, binary, and map artifacts
+*.elf
+*.bin
+*.hex
+*.axf
+*.map
+*.out
+
+# ==============================================================================
+# Python Virtual Environments & Cache
+# ==============================================================================
+.venv/
+venv/
+ENV/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+*.log
+
+# ==============================================================================
+# IDE & Editor Specific Files
+# ==============================================================================
+# VS Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/c_cpp_properties.json
+
+# Clang / Language Server
+.clangd/
+compile_commands.json
+
+# Windows & OS Artifacts
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
