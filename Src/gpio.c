@@ -32,8 +32,13 @@ void gpio_dma_init(void) {
 
     // 7. Unmask Interrupt Lines
     EXTI->IMR |= ((1U << 0) | (1U << 1) | (1U << 4) | (1U << 5));
+    // 8. Configure Interrupt Priorities
+    NVIC_SetPriority(EXTI0_IRQn, 5);
+    NVIC_SetPriority(EXTI1_IRQn, 5);
+    NVIC_SetPriority(EXTI4_IRQn, 5);
+    NVIC_SetPriority(EXTI9_5_IRQn, 5);
 
-    // 8. Enable Interrupts in NVIC
+    // 9. Enable Interrupts in NVIC
     NVIC_EnableIRQ(EXTI0_IRQn);
     NVIC_EnableIRQ(EXTI1_IRQn);
     NVIC_EnableIRQ(EXTI4_IRQn);
@@ -41,4 +46,5 @@ void gpio_dma_init(void) {
 
     // 9. Enable Global Interrupts (Cortex-M Primask)
     __asm volatile ("cpsie i" : : : "memory");
+
 }

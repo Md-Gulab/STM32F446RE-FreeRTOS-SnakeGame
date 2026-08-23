@@ -3,49 +3,32 @@
 
 #include <stdint.h>
 
-
-// ============================================================
 // BOARD CONFIGURATION
-// ============================================================
-
 #define BOARD_WIDTH        120U
 #define BOARD_HEIGHT       90U
-
 #define MAX_SNAKE_LENGTH   100U
 
-
-// ============================================================
 // DIRECTION
-// ============================================================
-
 typedef enum
 {
     DIR_RIGHT,
     DIR_LEFT,
     DIR_UP,
     DIR_DOWN
-
 } DIRECTION;
 
 
-// ============================================================
 // LAST ISR
-// ============================================================
-
 typedef enum
 {
     ISR_right,
     ISR_left,
     ISR_up,
     ISR_down
-
 } ISR;
 
 
-// ============================================================
 // POSITION
-// ============================================================
-
 typedef struct
 {
     uint16_t x_pos;
@@ -54,103 +37,70 @@ typedef struct
 } POSITION;
 
 
-// ============================================================
 // PREVIOUS POSITION
-// ============================================================
-
 typedef struct
 {
     uint16_t x_pos_last;
     uint16_t y_pos_last;
-
 } LASTPOSITION;
 
 
-// ============================================================
 // FOOD
-// ============================================================
-
 typedef struct
 {
     uint16_t x_pos;
     uint16_t y_pos;
-
 } FOOD;
 
 
-// ============================================================
 // GAME STATUS
-// ============================================================
-
 typedef enum
 {
     GAME_RUNNING   = 0,
     GAME_OVER_WALL = 1,
     GAME_OVER_SELF = 2
-
 } GAME_STATUS;
 
+//snapshot class
+typedef struct{
+    POSITION snake[MAX_SNAKE_LENGTH];
+    uint16_t snake_length;
+    FOOD food;
+    uint32_t score;
+    uint8_t game_status;
+} SnakeGameSnapshot_t;
 
-// ============================================================
+
 // GLOBAL VARIABLES
-// ============================================================
-
 extern volatile POSITION Snake[MAX_SNAKE_LENGTH];
-
 extern volatile LASTPOSITION snakelast[MAX_SNAKE_LENGTH];
-
 extern uint16_t snake_length;
-
 extern volatile DIRECTION directionOfSnake;
-
 extern volatile ISR LastISR;
-
 extern volatile FOOD Food;
-
 extern uint32_t score;
-
 extern volatile GAME_STATUS game_status;
+void Snake_GetSnapshot(SnakeGameSnapshot_t *snapshot);
 
 
-// ============================================================
 // INITIALIZATION
-// ============================================================
-
 void Snake_Init(void);
-
 void Food_Init(void);
 
-
-// ============================================================
 // GAME MOVEMENT
-// ============================================================
-
 void Snake_Move(void);
 
-
-// ============================================================
 // FOOD
-// ============================================================
-
 void Food_Generate(void);
 
-
-// ============================================================
 // COLLISION
-// ============================================================
-
 uint8_t Snake_Hit_Wall(void);
-
 uint8_t Snake_Hit_Self(void);
-
 uint8_t Snake_Ate_Food(void);
 
-
-// ============================================================
-// COMMUNICATION
-// ============================================================
-
-void Snake_SendPacket(void);
-
+//FreeRTOS related function
+void Snake_Lock(void);
+void Snake_Unlock(void);
+uint32_t Snake_GetSpeed(void);
 
 #endif

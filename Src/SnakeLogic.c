@@ -1,17 +1,32 @@
 #include "SnakeLogic.h"
-#include "timer.h"
+#include "AppTasks.h"
 #include "stm32f446xx.h"
-#include "usart_DMA.h"
+
+#include "FreeRTOS.h"
+#include "semphr.h"
 
 #include <stdint.h>
-#include <stdio.h>
 
 
-// ============================================================
-// SOFTWARE RANDOM NUMBER GENERATOR
-// ============================================================
+//MUTEX
+static StaticSemaphore_t snakeMutexBuffer;
+static SemaphoreHandle_t snakeMutex = NULL;
 
-static uint32_t random_seed ;
+//RANDOM NUMBER GENERATOR
+static uint32_t random_seed;
+
+//GAME VARIABLES
+volatile POSITION Snake[MAX_SNAKE_LENGTH];
+volatile LASTPOSITION snakelast[MAX_SNAKE_LENGTH];
+uint16_t snake_length;
+volatile DIRECTION directionOfSnake;
+volatile ISR LastISR;
+volatile FOOD Food;
+uint32_t score;
+volatile GAME_STATUS game_status;
+
+
+//RANDOM INITIALIZATION
 static void RNG_Init(void)
 {
     random_seed =
@@ -20,119 +35,96 @@ static void RNG_Init(void)
 }
 
 
-// ============================================================
-// PACKET SEQUENCE
-// ============================================================
-
-static uint32_t packet_sequence = 0U;
-
-
-// ============================================================
-// GLOBAL VARIABLES
-// ============================================================
-
-volatile POSITION Snake[MAX_SNAKE_LENGTH];
-
-volatile LASTPOSITION snakelast[MAX_SNAKE_LENGTH];
-
-uint16_t snake_length;
-
-volatile DIRECTION directionOfSnake;
-
-volatile ISR LastISR;
-
-volatile FOOD Food;
-
-uint32_t score;
-
-volatile GAME_STATUS game_status;
-
-// ============================================================
-// SOFTWARE RANDOM NUMBER GENERATOR
-// ============================================================
-
+//RANDOM NUMBER GENERATOR FUNCTION
 static uint32_t RNG_GetRandom(void)
 {
     random_seed =
-        (random_seed * 1664525U) + 1013904223U;
-
+        (random_seed * 1664525U)
+        + 1013904223U;
     return random_seed;
 }
 
 
-// ============================================================
-// CHECK WHETHER FOOD IS ON SNAKE
-// ============================================================
-
+//CHECK FOOD AGAINST SNAKE
 static uint8_t Food_Is_On_Snake(
     uint16_t x,
     uint16_t y
 )
 {
-    for (uint16_t i = 0U; i < snake_length; i++)
+    for (
+        uint16_t i = 0U;
+        i < snake_length;
+        i++
+    )
     {
-        if ((Snake[i].x_pos == x) &&
-            (Snake[i].y_pos == y))
+        if (
+            (Snake[i].x_pos == x) &&
+            (Snake[i].y_pos == y)
+        )
         {
             return 1U;
         }
     }
-
     return 0U;
 }
 
 
-// ============================================================
-// GENERATE FOOD
-// ============================================================
-
+//GENERATE FOOD
 void Food_Generate(void)
 {
     uint16_t x;
     uint16_t y;
-
     do
     {
-        x = (uint16_t)
-            (RNG_GetRandom() % BOARD_WIDTH);
-
-        y = (uint16_t)
-            (RNG_GetRandom() % BOARD_HEIGHT);
-
-    } while (Food_Is_On_Snake(x, y));
+        x = (uint16_t)(
+            RNG_GetRandom()
+            % BOARD_WIDTH
+        );
+        y = (uint16_t)(
+            RNG_GetRandom()
+            % BOARD_HEIGHT
+        );
+    } 
+    while (
+        Food_Is_On_Snake(x, y)
+    );
 
     Food.x_pos = x;
     Food.y_pos = y;
 }
 
 
-// ============================================================
-// FOOD INITIALIZATION
-// ============================================================
-
+//FOOD INITIALIZATION
 void Food_Init(void)
 {
     RNG_Init();
-
     score = 0U;
-
     game_status = GAME_RUNNING;
-
     Food_Generate();
 }
 
 
-// ============================================================
-// SNAKE INITIALIZATION
-// ============================================================
-
+//SNAKE INITIALIZATION
 void Snake_Init(void)
 {
-    directionOfSnake = DIR_RIGHT;
+    //Create mutex
+    snakeMutex =
+        xSemaphoreCreateMutexStatic(
+            &snakeMutexBuffer
+        );
 
+    if (snakeMutex == NULL)
+    {
+        while (1)
+        {
+        }
+    }
+
+    //Initial direction
+    directionOfSnake = DIR_RIGHT;
     LastISR = ISR_right;
 
-
+    //Initial snake
     Snake[0].x_pos = 40U;
     Snake[0].y_pos = 40U;
 
@@ -145,13 +137,15 @@ void Snake_Init(void)
     Snake[3].x_pos = 37U;
     Snake[3].y_pos = 40U;
 
-
     snake_length = 4U;
 
 
-    for (uint16_t i = 0U;
-         i < snake_length;
-         i++)
+    //Previous positions
+    for (
+        uint16_t i = 0U;
+        i < snake_length;
+        i++
+    )
     {
         snakelast[i].x_pos_last =
             Snake[i].x_pos;
@@ -162,31 +156,89 @@ void Snake_Init(void)
 }
 
 
-// ============================================================
-// WALL COLLISION
-//
-// Wrap-around is enabled, therefore boundaries are not
-// treated as collisions.
-// ============================================================
-
-uint8_t Snake_Hit_Wall(void)
+//LOCK
+void Snake_Lock(void)
 {
+    if (snakeMutex != NULL)
+    {
+        xSemaphoreTake(
+            snakeMutex,
+            portMAX_DELAY
+        );
+    }
+}
+
+
+//UNLOCK
+void Snake_Unlock(void)
+{
+    if (snakeMutex != NULL)
+    {
+        xSemaphoreGive(
+            snakeMutex
+        );
+    }
+}
+
+
+//SNAPSHOT
+void Snake_GetSnapshot(
+    SnakeGameSnapshot_t *snapshot)
+{
+    if (snapshot == NULL)
+    {
+        return;
+    }
+    Snake_Lock();
+
+    snapshot->snake_length =
+        snake_length;
+
+    for (
+        uint16_t i = 0U;
+        i < snake_length;
+        i++
+    )
+    {
+        snapshot->snake[i] =
+            Snake[i];
+    }
+
+    snapshot->food =
+        Food;
+
+    snapshot->score =
+        score;
+
+    snapshot->game_status =
+        game_status;
+
+    Snake_Unlock();
+}
+
+
+//WALL COLLISION
+uint8_t Snake_Hit_Wall(void){
     return 0U;
 }
 
 
-// ============================================================
-// SELF COLLISION
-// ============================================================
-
+//SELF COLLISION
 uint8_t Snake_Hit_Self(void)
 {
-    for (uint16_t i = 1U;
-         i < snake_length;
-         i++)
+    for (
+        uint16_t i = 1U;
+        i < snake_length;
+        i++
+    )
     {
-        if ((Snake[0].x_pos == Snake[i].x_pos) &&
-            (Snake[0].y_pos == Snake[i].y_pos))
+        if (
+            (Snake[0].x_pos ==
+             Snake[i].x_pos) &&
+
+            (Snake[0].y_pos ==
+             Snake[i].y_pos)
+        )
         {
             return 1U;
         }
@@ -196,10 +248,7 @@ uint8_t Snake_Hit_Self(void)
 }
 
 
-// ============================================================
-// FOOD COLLISION
-// ============================================================
-
+//FOOD COLLISION
 uint8_t Snake_Ate_Food(void)
 {
     return (
@@ -209,113 +258,36 @@ uint8_t Snake_Ate_Food(void)
 }
 
 
-// ============================================================
-// SEND COMPLETE GAME PACKET
-// ============================================================
-
-void Snake_SendPacket(void)
-{
-    char packet[2048];
-
-    int offset = 0;
-
-
-    offset += sprintf(
-        &packet[offset],
-        "@SNAKE,%lu,%u",
-        (unsigned long)packet_sequence++,
-        (unsigned int)snake_length
-    );
-
-
-    for (uint16_t i = 0U;
-         i < snake_length;
-         i++)
-    {
-        offset += sprintf(
-            &packet[offset],
-            ",%u,%u",
-            (unsigned int)Snake[i].x_pos,
-            (unsigned int)Snake[i].y_pos
-        );
-    }
-
-
-    offset += sprintf(
-        &packet[offset],
-        ",%u,%u",
-        (unsigned int)Food.x_pos,
-        (unsigned int)Food.y_pos
-    );
-
-
-    offset += sprintf(
-        &packet[offset],
-        ",%lu",
-        (unsigned long)score
-    );
-
-
-    offset += sprintf(
-        &packet[offset],
-        ",%u",
-        (unsigned int)game_status
-    );
-
-
-    offset += sprintf(
-        &packet[offset],
-        "\r\n"
-    );
-
-
-    if (!usart_dma_tx_busy())
-    {
-        usart_dma_send(
-            packet,
-            (uint16_t)offset
-        );
-    }
-}
-
-
-
-
-
-
-// ============================================================
-// SNAKE MOVEMENT
-// ============================================================
-
+//SNAKE MOVEMENT
 void Snake_Move(void)
 {
     POSITION old_tail;
 
+    //Lock game state
+    Snake_Lock();
 
+
+    //Check game status
     if (game_status != GAME_RUNNING)
     {
+        Snake_Unlock();
         return;
     }
 
 
-    // --------------------------------------------------------
     // Save old tail
-    // --------------------------------------------------------
-
     old_tail.x_pos =
         Snake[snake_length - 1U].x_pos;
 
     old_tail.y_pos =
         Snake[snake_length - 1U].y_pos;
 
-
-    // --------------------------------------------------------
-    // Save previous positions
-    // --------------------------------------------------------
-
-    for (uint16_t i = 0U;
-         i < snake_length;
-         i++)
+    //Save previous positions
+    for (
+        uint16_t i = 0U;
+        i < snake_length;
+        i++
+    )
     {
         snakelast[i].x_pos_last =
             Snake[i].x_pos;
@@ -325,30 +297,27 @@ void Snake_Move(void)
     }
 
 
-    // --------------------------------------------------------
-    // Move body
-    // --------------------------------------------------------
-
-    for (int i = (int)snake_length - 1;
-         i > 0;
-         i--)
+    
+    //Move body
+    for (
+        int i = (int)snake_length - 1;
+        i > 0;
+        i--
+    )
     {
-        Snake[i] = Snake[i - 1];
+        Snake[i] =
+            Snake[i - 1];
     }
 
-
-    // --------------------------------------------------------
-    // Move HEAD
-    //
-    // Only the head wraps.
-    // The body follows normally.
-    // --------------------------------------------------------
-
+    //Move head
     switch (directionOfSnake)
     {
+        //-----------------------------------------
         case DIR_RIGHT:
-
-            if (Snake[0].x_pos >= BOARD_WIDTH - 1U)
+            if (
+                Snake[0].x_pos >=
+                BOARD_WIDTH - 1U
+            )
             {
                 Snake[0].x_pos = 0U;
             }
@@ -356,41 +325,44 @@ void Snake_Move(void)
             {
                 Snake[0].x_pos++;
             }
-
             break;
 
-
+        //-----------------------------------------
         case DIR_LEFT:
-
-            if (Snake[0].x_pos == 0U)
+            if (
+                Snake[0].x_pos == 0U
+            )
             {
-                Snake[0].x_pos = BOARD_WIDTH - 1U;
+                Snake[0].x_pos =
+                    BOARD_WIDTH - 1U;
             }
             else
             {
                 Snake[0].x_pos--;
             }
-
             break;
 
-
+        //-----------------------------------------
         case DIR_UP:
-
-            if (Snake[0].y_pos == 0U)
+            if (
+                Snake[0].y_pos == 0U
+            )
             {
-                Snake[0].y_pos = BOARD_HEIGHT - 1U;
+                Snake[0].y_pos =
+                    BOARD_HEIGHT - 1U;
             }
             else
             {
                 Snake[0].y_pos--;
             }
-
             break;
 
-
+        //------------------------------------------
         case DIR_DOWN:
-
-            if (Snake[0].y_pos >= BOARD_HEIGHT - 1U)
+            if (
+                Snake[0].y_pos >=
+                BOARD_HEIGHT - 1U
+            )
             {
                 Snake[0].y_pos = 0U;
             }
@@ -398,80 +370,53 @@ void Snake_Move(void)
             {
                 Snake[0].y_pos++;
             }
-
             break;
 
-
+        //--------------------------------------------
         default:
             break;
     }
 
-
-    // --------------------------------------------------------
-    // Self collision
-    // --------------------------------------------------------
-
+    //Self collision
     if (Snake_Hit_Self())
     {
         game_status = GAME_OVER_SELF;
-
-        Snake_SendPacket();
-
+        Snake_Unlock();
         return;
     }
 
 
-    // --------------------------------------------------------
-    // Food
-    // --------------------------------------------------------
-
-    if (Snake_Ate_Food())
-    {
-        if (snake_length < MAX_SNAKE_LENGTH)
-        {
-            Snake[snake_length] = old_tail;
+    
+    //  Food ->score++ ,,,, speed++
+    if (Snake_Ate_Food()){
+       //Increase length
+        if( snake_length < MAX_SNAKE_LENGTH ){
+            Snake[snake_length] =
+            old_tail;
             snake_length++;
         }
 
+        //Increase score
         score++;
 
-
-        // ----------------------------------------------------
-        // Increase speed
-        // ----------------------------------------------------
-
-        uint32_t current_speed =
-            timer2_get_speed();
-
-
+        //Increase snake speed
+        uint32_t current_speed;
+        uint32_t new_speed;
+        current_speed = SnakeTimer_GetSpeed();
         if (current_speed > MIN_SNAKE_SPEED_MS)
         {
-            uint32_t new_speed =
-                current_speed - SPEED_INCREMENT_MS;
-
-
+            new_speed = current_speed - SPEED_INCREMENT_MS;
             if (new_speed < MIN_SNAKE_SPEED_MS)
             {
-                new_speed = MIN_SNAKE_SPEED_MS;
+                new_speed =MIN_SNAKE_SPEED_MS;
             }
-          
-            //new_speed -- ;
-
-            timer2_set_speed(new_speed);
+            SnakeTimer_SetSpeed(new_speed);
         }
 
-
-        // ----------------------------------------------------
-        // Generate next food
-        // ----------------------------------------------------
-
+        //Generate new food
         Food_Generate();
     }
 
-
-    // --------------------------------------------------------
-    // Send state
-    // --------------------------------------------------------
-
-    Snake_SendPacket();
+    //Unlock
+    Snake_Unlock();
 }

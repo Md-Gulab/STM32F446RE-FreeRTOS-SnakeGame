@@ -1,53 +1,145 @@
-# ==============================================================================
-# Build Output & Binaries
-# ==============================================================================
-Builds/
-build/
-bin/
-obj/
+# ============================================================
 
-# Object and dependency files
+# STM32 / STM32CubeIDE
+
+# ============================================================
+
+# Build output
+
+Debug/
+Release/
+
+# STM32CubeIDE generated files
+
+.settings/
+.metadata/
+.project
+.cproject
+
+# Eclipse metadata
+
+.factorypath
+.loadpath
+
+# STM32CubeMX generated temporary files
+
+*.ioc.backup
+*.ioc.tmp
+
+# ============================================================
+
+# C / C++ Build Artifacts
+
+# ============================================================
+
 *.o
 *.obj
-*.d
-
-# Executable, binary, and map artifacts
 *.elf
-*.bin
 *.hex
-*.axf
+*.bin
 *.map
-*.out
+*.list
+*.d
+*.su
 
-# ==============================================================================
-# Python Virtual Environments & Cache
-# ==============================================================================
+# ============================================================
+
+# Python
+
+# ============================================================
+
+# Python cache
+
+**pycache**/
+*.py[cod]
+
+# Virtual environments
+
 .venv/
 venv/
-ENV/
 env/
-__pycache__/
-*.py[cod]
-*$py.class
+ENV/
+
+# Distribution / packaging
+
+build/
+dist/
+*.egg-info/
+
+# Python test/cache files
+
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ============================================================
+
+# Pygame / Project Runtime Files
+
+# ============================================================
+
 *.log
+*.tmp
 
-# ==============================================================================
-# IDE & Editor Specific Files
-# ==============================================================================
-# VS Code
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/c_cpp_properties.json
+# ============================================================
 
-# Clang / Language Server
-.clangd/
-compile_commands.json
+# IDE / Editor
 
-# Windows & OS Artifacts
+# ============================================================
+
+.vscode/
+.idea/
+
+# VS Code workspace
+
+*.code-workspace
+
+# ============================================================
+
+# OS Generated Files
+
+# ============================================================
+
+# Windows
+
 Thumbs.db
-ehthumbs.db
 Desktop.ini
-$RECYCLE.BIN/
+
+# macOS
+
 .DS_Store
+
+# Linux
+
+*~
+
+# ============================================================
+
+# Serial / Debug Files
+
+# ============================================================
+
+*.trace
+*.dump
+*.out
+
+# ============================================================
+
+# Environment / Secrets
+
+# ============================================================
+
+.env
+.env.*
+!.env.example
+
+# ============================================================
+
+# Backup Files
+
+# ============================================================
+
+*.bak
+*.backup
+*.orig
+*~

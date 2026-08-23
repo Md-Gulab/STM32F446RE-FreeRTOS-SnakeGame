@@ -11,9 +11,12 @@ OPENOCD  = openocd
 # Target & MCU Configuration
 # ==============================================================================
 
-TARGET   = main
-MCU      = -mcpu=cortex-m4 -mthumb
-FLOAT    = -mfloat-abi=soft
+TARGET    = main
+
+CPU       = -mcpu=cortex-m4
+FPU       = -mfpu=fpv4-sp-d16
+FLOAT_ABI = -mfloat-abi=hard
+MCU       = $(CPU) -mthumb $(FPU) $(FLOAT_ABI)
 
 BUILD_DIR = Builds
 
@@ -24,21 +27,23 @@ BUILD_DIR = Builds
 INC_DIR  = -I. \
            -I./Inc \
            -I./CMSIS/Include \
-           -I./CMSIS/Device/ST/STM32F4xx/Include
+           -I./CMSIS/Device/ST/STM32F4xx/Include \
+           -I./FreeRTOS/include \
+           -I./FreeRTOS/portable/GCC/ARM_CM4F
 
 # ==============================================================================
 # Compiler & Linker Flags
 # ==============================================================================
 
 CFLAGS   = $(MCU) \
-           $(FLOAT) \
            -DSTM32F446xx \
            -Wall \
-           -O0 \
+           -Os \
            -g \
            $(INC_DIR)
 
-LDFLAGS  = -T linker.ld \
+LDFLAGS  = $(MCU) \
+           -T linker.ld \
            -nostartfiles \
            --specs=nano.specs \
            --specs=nosys.specs
@@ -47,24 +52,38 @@ LDFLAGS  = -T linker.ld \
 # Source Files & Object Generation
 # ==============================================================================
 
-# C sources from Src/ directory
-SRCS_C   = Src/main.c \
-           Src/gpio.c \
-           Src/isr.c \
-           Src/usart_DMA.c \
-           Src/SnakeLogic.c \
-           Src/timer.c
+# Application C sources (Added AppTasks.c)
+C_SOURCES  = Src/main.c \
+             Src/AppTasks.c \
+             Src/gpio.c \
+             Src/isr.c \
+             Src/usart_DMA.c \
+             Src/SnakeLogic.c \
+             Src/timer.c 
+             
 
-# Startup assembly file from root directory
-SRCS_S   = startup_stm32f446xx.s
+# Minimal FreeRTOS sources (Tasks + List + Port only)
+C_SOURCES += FreeRTOS/tasks.c \
+             FreeRTOS/queue.c \
+             FreeRTOS/list.c \
+             FreeRTOS/timers.c \
+             FreeRTOS/event_groups.c \
+             FreeRTOS/portable/GCC/ARM_CM4F/port.c
 
-# Object files mapped to Builds/ directory
-OBJS     = $(BUILD_DIR)/startup_stm32f446xx.o \
-           $(patsubst Src/%.c, $(BUILD_DIR)/%.o, $(SRCS_C))
+# Startup assembly file
+SRCS_S     = startup_stm32f446xx.s
+
+# Object files mapped to Builds/
+OBJS       = $(addprefix $(BUILD_DIR)/, $(notdir $(C_SOURCES:.c=.o)))
+OBJS      += $(BUILD_DIR)/$(notdir $(SRCS_S:.s=.o))
+
+# Tell Make where to search for source files
+vpath %.c $(sort $(dir $(C_SOURCES)))
+vpath %.s $(dir $(SRCS_S))
 
 # Output file paths
-ELF_FILE = $(BUILD_DIR)/$(TARGET).elf
-BIN_FILE = $(BUILD_DIR)/$(TARGET).bin
+ELF_FILE   = $(BUILD_DIR)/$(TARGET).elf
+BIN_FILE   = $(BUILD_DIR)/$(TARGET).bin
 
 # ==============================================================================
 # OpenOCD Settings
@@ -104,13 +123,13 @@ $(BIN_FILE): $(ELF_FILE)
 	$(OBJCOPY) -O binary $< $@
 	$(SIZE) $<
 
-# Compile C source files from Src/ into Builds/
-$(BUILD_DIR)/%.o: Src/%.c | $(BUILD_DIR)
+# Compile C source files into Builds/
+$(BUILD_DIR)/%.o: %.c | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# Compile startup assembly file from root into Builds/
+# Compile startup assembly file into Builds/
 $(BUILD_DIR)/%.o: %.s | $(BUILD_DIR)
-	$(CC) $(MCU) $(FLOAT) $(INC_DIR) -c $< -o $@
+	$(CC) $(CFLAGS) -c $< -o $@
 
 # Flash the target device
 flash: $(ELF_FILE)

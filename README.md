@@ -1,284 +1,224 @@
-# 🐍 Snake Game — STM32F446RE
+# STM32 FreeRTOS Snake Game
 
-A hardware-controlled Snake Game developed using the **STM32F446RE** microcontroller, where the snake is controlled using physical push buttons and the game is rendered on a PC using **Python**, **PySerial**, and **Pygame**.
+A real-time Snake Game implemented on the **STM32F446RE** using **FreeRTOS**, with a Python/Pygame-based GUI for game visualization and real-time RTOS monitoring.
 
-The STM32 handles the core game logic, button inputs, snake movement, collision detection, food generation, score, and game state, while the PC provides the graphical interface.
-
----
-
-## 🎬 Project Demonstration
-
-Click below to watch the hardware & gameplay demo in action on YouTube:
-
-[![Watch the Demo](https://img.youtube.com/vi/McwZJfSJrOo/maxresdefault.jpg)](https://youtu.be/McwZJfSJrOo)
+This project was developed to explore practical **Embedded C, STM32, FreeRTOS, RTOS task management, inter-task communication, interrupts, timers, UART/DMA communication, and runtime analysis**.
 
 ---
 
-## 📌 Project Status
+## Features
 
-### Version 1 — Bare-Metal Implementation (Current)
-This is **Version 1** of the Snake Game.
-The entire game is implemented using a bare-metal STM32 approach without FreeRTOS. Interrupts, timers, UART/DMA communication, GPIO, and game logic are handled directly by the application and peripheral drivers.
+* Snake game running on STM32F446RE
+* FreeRTOS-based multitasking
+* Automatic snake movement using a FreeRTOS software timer
+* GPIO interrupts for:
 
-### Version 2 — FreeRTOS Implementation (Planned)
-A future **Version 2** will integrate FreeRTOS into the project.
-The objective of Version 2 is not only to improve the architecture and functionality of the game, but also to use the Snake Game as a practical platform for learning and demonstrating FreeRTOS concepts such as:
-- Tasks and task scheduling
-- Task priorities
-- Queues
-- Semaphores
-- Mutexes
-- Task notifications
-- Software timers
-- Interrupt-to-task communication
-- Event groups
-- Inter-task communication & Synchronization
-- Tick management and delays
-
----
-
-## 🎮 Features
-
-- **Hardware-controlled Snake Game**
-- **Four-directional movement:**
-  - ⬆️ Up
-  - ⬇️ Down
-  - ⬅️ Left
-  - ➡️ Right
-- **Continuous snake movement**
-- **Food generation & collision detection**
-- **Snake growth after eating food**
-- **Self-collision detection & Game Over state**
-- **Score tracking & dynamic speed increase**
-- **Screen boundary wrapping**
-- **UART communication with DMA** (High-throughput, non-blocking telemetry transfer)
-- **Python-based graphical interface** (Pygame rendering)
-- **Interrupt-driven button inputs** (EXTI)
+  * Up
+  * Down
+  * Left
+  * Right
+* Random food generation
+* Snake growth and speed increase after eating food
+* Wall wrapping
+* Collision detection
+* Score tracking
+* UART communication using DMA
+* Real-time game telemetry sent to PC
+* Python/Pygame graphical interface
+* Real-time FreeRTOS task monitoring
+* Task priority monitoring
+* CPU utilization monitoring
+* Runtime counter monitoring
+* Stack High Water Mark monitoring
 
 ---
 
-## 🧠 How It Works
+## System Architecture
 
 ```text
-                 ┌──────────────────────────┐
-                 │       STM32F446RE        │
-                 │                          │
-                 │  GPIO Button Inputs      │
-                 │          │               │
-                 │          ▼               │
-                 │     EXTI Interrupts      │
-                 │          │               │
-                 │          ▼               │
-                 │     Snake Game Logic     │
-                 │          │               │
-                 │   ┌──────┴──────┐        │
-                 │   │             │        │
-                 │   ▼             ▼        │
-                 │ Snake        Food/Score  │
-                 │ Movement      Collision  │
-                 │   │                      │
-                 │   └──────────┐           │
-                 │              ▼           │
-                 │       USART2 + DMA       │
-                 └──────────────┬───────────┘
-                                │
-                                │ UART
-                                ▼
-                 ┌──────────────────────────┐
-                 │           PC             │
-                 │                          │
-                 │       Python             │
-                 │      PySerial            │
-                 │        Pygame            │
-                 │                          │
-                 │     Game Rendering       │
-                 └──────────────────────────┘
-```
-
-1. **Input**: Button presses generate GPIO external interrupts (`EXTI`) on the STM32 to update the intended direction buffer.
-2. **Game Loop**: A hardware timer updates snake coordinates periodically, tests collisions, handles food respawns, and updates scores.
-3. **Telemetry via DMA**: Game frame data is streamed non-intrusively via `USART2` using DMA channels.
-4. **PC Rendering**: The Python `pygame` script reads the serial packet stream and renders each game frame smoothly.
-
----
-
-## 🔧 Hardware
-
-- **Microcontroller:** STM32F446RE (Nucleo-64)
-- **Input:** 4 Push Buttons connected to GPIOs with internal pull-up / pull-down and EXTI interrupts:
-  | Button | Direction |
-  |---|---|
-  | Button 1 | ⬆️ Up |
-  | Button 2 | ⬇️ Down |
-  | Button 3 | ⬅️ Left |
-  | Button 4 | ➡️ Right |
-- **Communication:** USART2 over ST-LINK Virtual COM Port / USB-to-UART bridge.
-
----
-
-## 💻 Software & Toolchain
-
-### Embedded Side
-- **Language:** Embedded C / ARM Assembly
-- **Architecture:** ARM Cortex-M4 (STM32F446xx)
-- **Toolchain:** `arm-none-eabi-gcc`, GNU Make, OpenOCD
-- **Peripherals:** GPIO, EXTI, Timers (TIM), USART2, DMA, CMSIS Core/Device headers
-
-### PC Side
-- **Language:** Python 3
-- **Libraries:** `pyserial`, `pygame`
-
----
-
-## 📂 Project Structure
-
-```text
-Snake_Game/
-├── CMSIS/                          # ARM CMSIS Core & ST Device headers
-│   ├── Device/
-│   │   └── ST/
-│   │       └── STM32F4xx/
-│   │           └── Include/
-│   └── Include/
-├── Inc/                            # C Header files
-│   ├── isr.h
-│   ├── SnakeLogic.h
-│   ├── timer.h
-│   └── usart_DMA.h
-├── Src/                            # C Source files
-│   ├── gpio.c
-│   ├── isr.c
-│   ├── main.c
-│   ├── SnakeLogic.c
-│   ├── timer.c
-│   └── usart_DMA.c
-├── python/                         # PC Graphical & Test scripts
-│   ├── dma_test.py
-│   ├── serial_test.py
-│   └── snake_display.py
-├── linker.ld                       # Linker script for STM32F446RE
-├── Makefile                        # Build and flash automation
-├── startup_stm32f446xx.s           # Startup assembly file with vector table
-└── README.md                       # Project documentation
+                 STM32F446RE
+                     │
+             ┌───────┴────────┐
+             │    FreeRTOS    │
+             └───────┬────────┘
+                     │
+       ┌─────────────┼─────────────┐
+       │             │             │
+    Snake Task    Game Task    UART Task
+       │             │             │
+       └─────────────┼─────────────┘
+                     │
+                 UART + DMA
+                     │
+                     ▼
+                PC / COM Port
+                     │
+                     ▼
+              Python + Pygame
+                     │
+          ┌──────────┴──────────┐
+          │                     │
+      Snake GUI           RTOS Monitor
 ```
 
 ---
 
-## 🔄 Game Flow
+## FreeRTOS Tasks
+
+The project uses multiple FreeRTOS components to demonstrate RTOS-based application design.
+
+| Task          | Purpose                                          |
+| ------------- | ------------------------------------------------ |
+| Snake         | Controls automatic snake movement and game logic |
+| Game          | Handles game-related processing                  |
+| UART          | Handles telemetry communication with the PC      |
+| Timer Service | FreeRTOS software timer management               |
+| IDLE          | FreeRTOS idle task                               |
+
+The Python GUI displays runtime information for these tasks, including:
+
+* Task priority
+* CPU utilization
+* Runtime counter
+* Stack High Water Mark
+
+---
+
+## Communication Protocol
+
+The STM32 sends structured packets over UART.
+
+### Snake telemetry
 
 ```text
-Start Game
-    │
-    ▼
-Initialize STM32 Peripherals (GPIO, EXTI, USART2, DMA, Timer)
-    │
-    ▼
-Initialize Snake & Generate Food
-    │
-    ▼
-Snake Moves Automatically on Timer Tick
-    │
-    ├── Button Press Interrupt? ──> Yes ──> Update Direction
-    │
-    ├── Food Collision? ──────────> Yes ──> Increase Length & Score, Spawn Food
-    │
-    ├── Self Collision? ──────────> Yes ──> Trigger Game Over State
-    │
-    └── Boundary Check ───────────> Yes ──> Wrap Around Screen
-            │
-            ▼
-Send Game State Packet via USART2 (DMA)
-            │
-            ▼
-PC (PySerial + Pygame) reads packet & updates screen display
+@SNAKE,SEQ,LENGTH,X1,Y1,X2,Y2,...,FOOD_X,FOOD_Y,SCORE,STATUS
 ```
 
+### RTOS telemetry
+
+```text
+@RTOS,TASK,RUNTIME,PRIORITY,CPU_X100,HWM
+```
+
+Example:
+
+```text
+@RTOS,Snake,275480,3,31,481
+```
+
+The Python application parses these packets and updates the GUI in real time.
+
 ---
 
-## 📡 STM32 ↔ PC Communication
+## Hardware
 
-The STM32 periodically transmits serialized game packets through UART:
-- Snake body coordinates & length
-- Current movement direction
-- Food coordinates
-- Player score
-- Game status flags (Alive, Game Over)
-
-Using **DMA** relieves the CPU from per-byte TX overhead, allowing deterministic timing for the core logic loop.
+* **Microcontroller:** STM32F446RE
+* GPIO push buttons for directional control
+* USB/UART connection to PC
+* UART with DMA for telemetry transmission
 
 ---
 
-## 🚀 Running the Project
+## Software
 
-### 1. Build and Flash STM32
-Make sure `arm-none-eabi-gcc` and `openocd` are installed and added to your system `PATH`.
+* Embedded C
+* STM32
+* FreeRTOS
+* Python
+* Pygame
+* PySerial
+* UART
+* DMA
+* GPIO interrupts
+
+---
+
+## RTOS Monitoring
+
+The Python GUI provides a real-time FreeRTOS monitoring panel.
+
+Example:
+
+```text
+TASK        PRI       RUNTIME       HWM
+-----------------------------------------
+Snake        3         275480       481
+Game         3           1129       221
+UART         2        3698075       398
+Tmr Svc      2          56980       203
+IDLE         0       82370620       105
+
+-----------------------------------------
+CPU UTILIZATION
+
+Snake        0.31%
+Game         0.00%
+UART         4.27%
+Tmr Svc      0.06%
+IDLE        95.28%
+```
+
+This provides a simple way to observe **task scheduling and system runtime behavior** while the application is running.
+
+---
+
+## How to Run
+
+### 1. Build and flash the STM32 project
+
+Build the STM32 project using your preferred STM32 development environment and flash it to the STM32F446RE.
+
+### 2. Connect the STM32 to the PC
+
+Connect the board through the configured UART interface.
+
+Connect the 4 GPIO buttons
+
+Update the COM port in the Python application if required:
+
+```python
+PORT = "COM3"
+BAUD = 115200
+```
+
+### 3. Install Python dependencies
 
 ```bash
-# Build the project (creates binary artifacts inside Builds/)
-make all
-
-# Flash to the connected STM32F446RE board
-make flash
+pip install pygame pyserial
 ```
 
-### 2. Launch Python Display
-Install dependencies:
+### 4. Run the GUI
+
 ```bash
-pip install pyserial pygame
+python .\python\snake_display.py    AFTER running this :-  .\.venv\Scripts\Activate.ps1  if dependencies are installed
 ```
 
-Set your COM port inside `python/snake_display.py` (e.g., `COM3`), then launch:
-```bash
-python python/snake_display.py
-```
+The Pygame window will display the Snake game along with the FreeRTOS monitoring panel.
 
 ---
 
-## 🎯 Learning Objectives
+## What This Project Demonstrates
 
-- STM32 Bare-Metal Register-level & HAL/CMSIS development
-- Nested Vector Interrupt Controller (NVIC) & EXTI line routing
-- Precise hardware timers configuration
-- USART communication using Direct Memory Access (DMA)
-- Circular buffers and state-machine-driven game logic
-- Inter-system protocol design (Embedded C ↔ Python serial parsing)
-- 2D rendering with Pygame
+This project was primarily developed as a practical exercise in:
 
----
-
-## 🔮 Future Development — Version 2 (FreeRTOS)
-
-Version 2 will transition from the bare-metal superloop/ISR design to a multi-tasking Real-Time Operating System (**FreeRTOS**):
-
-```text
-                    FreeRTOS
-                       │
-        ┌──────────────┼──────────────┐
-        │              │              │
-        ▼              ▼              ▼
-   Snake Task      Input Task     UART Task
-        │              │              │
-        ▼              ▼              ▼
-   Game Logic      Button Data     PC Telemetry
-        │
-        ▼
-   Game State (Food, Collision, Score, Speed)
-```
+* Embedded C programming
+* STM32 peripheral programming
+* FreeRTOS task scheduling
+* Task priorities
+* Software timers
+* Inter-task communication
+* Interrupt handling
+* UART communication
+* DMA
+* Real-time telemetry
+* CPU/runtime analysis
+* Stack usage monitoring
+* PC-to-microcontroller integration
 
 ---
 
-## 📜 Version History
+## Author
 
-- **v1.0 (Current)**:
-  - Full bare-metal implementation on STM32F446RE
-  - EXTI push-button handling & Timer-driven movement
-  - DMA-driven USART2 communication
-  - Python Pygame frontend display
-- **v2.0 (Planned)**:
-  - FreeRTOS multitasking architecture
-  - FreeRTOS Queues, Mutexes, Semaphores, and Software Timers
-
----
-
-## 👨‍💻 Author
 **MD GULAB**
+
+Embedded Systems | STM32 | FreeRTOS | Embedded C
