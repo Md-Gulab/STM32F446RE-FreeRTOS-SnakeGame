@@ -32,6 +32,16 @@ This project was developed to explore practical **Embedded C, STM32, FreeRTOS, R
 * Stack High Water Mark monitoring
 
 ---
+## 🎥 Project Demonstration
+
+See the STM32 Snake Game in action, including the **FreeRTOS-based application, Snake gameplay, UART communication, and real-time RTOS monitoring through the Python/Pygame interface**.
+
+Click the thumbnail below to watch the complete project demonstration on YouTube.
+
+[![STM32 FreeRTOS Snake Game - Project Demonstration](https://img.youtube.com/vi/nL3p8pIJjf8/maxresdefault.jpg)](https://youtu.be/nL3p8pIJjf8)
+
+**▶ Watch the demonstration on YouTube**
+
 
 ## System Architecture
 
